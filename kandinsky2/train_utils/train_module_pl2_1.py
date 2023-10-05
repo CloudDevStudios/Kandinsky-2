@@ -108,33 +108,30 @@ class Decoder(pl.LightningModule):
             with torch.no_grad():
                 if self.image_enc_name == "AutoencoderKL":
                     batch = self.image_encoder.encode(batch).sample()
-                elif self.image_enc_name == "VQModelInterface":
-                    batch = self.image_encoder.encode(batch)
-                elif self.image_enc_name == "MOVQ":
+                elif self.image_enc_name in ["VQModelInterface", "MOVQ"]:
                     batch = self.image_encoder.encode(batch)
                 batch = batch * self.scale
         return batch
 
     def prepare_cond(self, cond):
-        if self.use_text_enc:
-            mask = None
-            new_cond = {}
-            for key in cond.keys():
-                if key not in ["tokens", "mask", "clip_image"]:
-                    new_cond[key] = cond[key]
-            if "mask" in cond:
-                mask = cond["mask"]
-            with torch.no_grad():
-                new_cond["image_emb"] = self.clip_model.encode_image(
-                    cond["clip_image"]
-                ).float()
-            with torch.no_grad():
-                new_cond["full_emb"], new_cond["pooled_emb"] = self.text_encoder(
-                    cond["tokens"].long(), mask
-                )
-            del cond
-            return new_cond
-        return cond
+        if not self.use_text_enc:
+            return cond
+        new_cond = {
+            key: cond[key]
+            for key in cond.keys()
+            if key not in ["tokens", "mask", "clip_image"]
+        }
+        mask = cond["mask"] if "mask" in cond else None
+        with torch.no_grad():
+            new_cond["image_emb"] = self.clip_model.encode_image(
+                cond["clip_image"]
+            ).float()
+        with torch.no_grad():
+            new_cond["full_emb"], new_cond["pooled_emb"] = self.text_encoder(
+                cond["tokens"].long(), mask
+            )
+        del cond
+        return new_cond
 
     def model_step(self, batch, stage):
         image, cond = batch

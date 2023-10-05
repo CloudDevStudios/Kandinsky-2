@@ -64,7 +64,7 @@ def get_kandinsky2_0(
             force_filename=name,
             use_auth_token=use_auth_token,
         )
-    
+
     config_file_url = hf_hub_url(repo_id="sberbank-ai/Kandinsky_2.0", filename="vae.ckpt")
     cached_download(
         config_file_url,
@@ -82,8 +82,7 @@ def get_kandinsky2_0(
     )
     unet_path = os.path.join(cache_dir, model_name)
 
-    model = Kandinsky2(config, unet_path, device, task_type)
-    return model
+    return Kandinsky2(config, unet_path, device, task_type)
 
 
 def get_kandinsky2_1(
@@ -156,8 +155,9 @@ def get_kandinsky2_1(
     config["image_enc_params"]["ckpt_path"] = os.path.join(cache_dir, "movq_final.ckpt")
     cache_model_name = os.path.join(cache_dir, model_name)
     cache_prior_name = os.path.join(cache_dir, prior_name)
-    model = Kandinsky2_1(config, cache_model_name, cache_prior_name, device, task_type=task_type)
-    return model
+    return Kandinsky2_1(
+        config, cache_model_name, cache_prior_name, device, task_type=task_type
+    )
 
 
 def get_kandinsky2(

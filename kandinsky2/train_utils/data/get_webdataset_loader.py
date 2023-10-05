@@ -63,11 +63,7 @@ def _transform(n_px):
 
 
 def filter0(s):
-    start = 0
-    for i in range(len(s)):
-        if s[i] != "0":
-            start = i
-            break
+    start = next((i for i in range(len(s)) if s[i] != "0"), 0)
     return s[start:]
 
 
@@ -80,7 +76,7 @@ def make_seed(*args):
 
 def create_path(item, m_dir):
     splited_dir = item["__url__"].split("/")
-    new_path = (
+    return (
         os.path.join(m_dir, splited_dir[-2])
         + "/"
         + splited_dir[-1][:-4]
@@ -88,7 +84,6 @@ def create_path(item, m_dir):
         + item["fname"][:-4]
         + ".npy"
     )
-    return new_path
 
 
 class ResampledShards(IterableDataset):
@@ -301,9 +296,7 @@ def create_webdataset(
 
             pil_image = np.array(pil_image_original.convert("RGB"))
 
-            if pil_image.shape[0] < 600 or pil_image.shape[1] < 600:
-                return False
-            return True
+            return pil_image.shape[0] >= 600 and pil_image.shape[1] >= 600
         except:
             return False
 

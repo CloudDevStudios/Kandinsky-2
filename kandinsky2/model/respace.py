@@ -17,8 +17,7 @@ def make_ddim_timesteps(ddim_discr_method, num_ddim_timesteps, num_ddpm_timestep
             f'There is no ddim discretization method called "{ddim_discr_method}"'
         )
 
-    steps_out = ddim_timesteps + 1
-    return steps_out
+    return ddim_timesteps + 1
 
 
 def space_timesteps(num_timesteps, section_counts):
@@ -58,10 +57,7 @@ def space_timesteps(num_timesteps, section_counts):
             raise ValueError(
                 f"cannot divide section of {size} steps into {section_count}"
             )
-        if section_count <= 1:
-            frac_stride = 1
-        else:
-            frac_stride = (size - 1) / (section_count - 1)
+        frac_stride = 1 if section_count <= 1 else (size - 1) / (section_count - 1)
         cur_idx = 0.0
         taken_steps = []
         for _ in range(section_count):

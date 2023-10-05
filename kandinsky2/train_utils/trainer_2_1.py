@@ -15,21 +15,18 @@ def prepare_image(batch, image_encoder, scale=1):
     with torch.no_grad():
         if type(image_enc_name) == AutoencoderKL:
             batch = image_encoder.encode(batch).sample()
-        elif type(image_enc_name) == VQModelInterface:
-            batch = image_encoder.encode(batch)
-        elif type(image_enc_name) == MOVQ:
+        elif type(image_enc_name) in [VQModelInterface, MOVQ]:
             batch = image_encoder.encode(batch)
         batch = batch * scale
     return batch
 
 def prepare_cond(cond, text_encoder, clip_model):
-    mask = None
-    new_cond = {}
-    for key in cond.keys():
-        if key not in ['tokens', 'mask', 'clip_image']:
-            new_cond[key] = cond[key]
-    if 'mask' in cond:
-        mask = cond['mask']
+    new_cond = {
+        key: cond[key]
+        for key in cond.keys()
+        if key not in ['tokens', 'mask', 'clip_image']
+    }
+    mask = cond['mask'] if 'mask' in cond else None
     with torch.no_grad():
         new_cond['image_emb'] = clip_model.encode_image(cond['clip_image']).float()
     with torch.no_grad():

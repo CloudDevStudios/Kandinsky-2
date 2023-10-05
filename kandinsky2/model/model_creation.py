@@ -43,9 +43,9 @@ def create_model(
     else:
         channel_mult = tuple(int(ch_mult) for ch_mult in channel_mult.split(","))
 
-    attention_ds = []
-    for res in attention_resolutions.split(","):
-        attention_ds.append(image_size // int(res))
+    attention_ds = [
+        image_size // int(res) for res in attention_resolutions.split(",")
+    ]
     if inpainting:
         if version == "2.0":
             model_cls = InpaintText2ImUNet
@@ -53,13 +53,12 @@ def create_model(
             model_cls = InpaintText2ImUNet2_1
         else:
             ValueError("Only 2.0 and 2.1 versions are available")
+    elif version == "2.0":
+        model_cls = Text2ImUNet
+    elif version == "2.1":
+        model_cls = Text2ImUNet2_1
     else:
-        if version == "2.0":
-            model_cls = Text2ImUNet
-        elif version == "2.1":
-            model_cls = Text2ImUNet2_1
-        else:
-            ValueError("Only 2.0 and 2.1 versions are available")
+        ValueError("Only 2.0 and 2.1 versions are available")
     return model_cls(
         in_channels=in_channels,
         model_channels=num_channels,

@@ -47,7 +47,7 @@ class VQModel(pl.LightningModule):
         for k in keys:
             for ik in ignore_keys:
                 if k.startswith(ik):
-                    print("Deleting key {} from state_dict.".format(k))
+                    print(f"Deleting key {k} from state_dict.")
                     del sd[k]
         missing, unexpected = self.load_state_dict(sd, strict=False)
         print(
@@ -70,20 +70,16 @@ class VQModel(pl.LightningModule):
 
     def decode(self, quant):
         quant = self.post_quant_conv(quant)
-        dec = self.decoder(quant)
-        return dec
+        return self.decoder(quant)
 
     def decode_code(self, code_b):
         quant_b = self.quantize.embed_code(code_b)
-        dec = self.decode(quant_b)
-        return dec
+        return self.decode(quant_b)
 
     def forward(self, input, return_pred_indices=False):
         quant, diff, (_, _, ind) = self.encode(input)
         dec = self.decode(quant)
-        if return_pred_indices:
-            return dec, diff, ind
-        return dec, diff
+        return (dec, diff, ind) if return_pred_indices else (dec, diff)
 
 
 class VQModelInterface(VQModel):
@@ -103,8 +99,7 @@ class VQModelInterface(VQModel):
         else:
             quant = h
         quant = self.post_quant_conv(quant)
-        dec = self.decoder(quant)
-        return dec
+        return self.decoder(quant)
 
 
 class AutoencoderKL(pl.LightningModule):
@@ -131,7 +126,7 @@ class AutoencoderKL(pl.LightningModule):
         for k in keys:
             for ik in ignore_keys:
                 if k.startswith(ik):
-                    print("Deleting key {} from state_dict.".format(k))
+                    print(f"Deleting key {k} from state_dict.")
                     del sd[k]
         self.load_state_dict(sd, strict=False)
         print(f"Restored from {path}")
@@ -139,20 +134,15 @@ class AutoencoderKL(pl.LightningModule):
     def encode(self, x):
         h = self.encoder(x)
         moments = self.quant_conv(h)
-        posterior = DiagonalGaussianDistribution(moments)
-        return posterior
+        return DiagonalGaussianDistribution(moments)
 
     def decode(self, z):
         z = self.post_quant_conv(z)
-        dec = self.decoder(z)
-        return dec
+        return self.decoder(z)
 
     def forward(self, input, sample_posterior=True):
         posterior = self.encode(input)
-        if sample_posterior:
-            z = posterior.sample()
-        else:
-            z = posterior.mode()
+        z = posterior.sample() if sample_posterior else posterior.mode()
         dec = self.decode(z)
         return dec, posterior
 
@@ -181,8 +171,7 @@ class MOVQ(nn.Module):
 
     def decode(self, quant):
         quant2 = self.post_quant_conv(quant)
-        dec = self.decoder(quant2, quant)
-        return dec
+        return self.decoder(quant2, quant)
 
     def decode_code(self, code_b):
         batch_size = code_b.shape[0]
@@ -192,8 +181,7 @@ class MOVQ(nn.Module):
         quant = rearrange(quant, "b h w c -> b c h w").contiguous()
         print(quant.shape)
         quant2 = self.post_quant_conv(quant)
-        dec = self.decoder(quant2, quant)
-        return dec
+        return self.decoder(quant2, quant)
 
     def forward(self, input):
         quant, diff, _ = self.encode(input)

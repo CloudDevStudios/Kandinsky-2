@@ -149,7 +149,7 @@ class Kandinsky2_1:
         cf_token, cf_mask = self.tokenizer2.padded_tokens_and_mask(
             [negative_prior_prompt], max_txt_length
         )
-        if not (cf_token.shape == tok.shape):
+        if cf_token.shape != tok.shape:
             cf_token = cf_token.expand(tok.shape[0], -1)
             cf_mask = cf_mask.expand(tok.shape[0], -1)
         tok = torch.cat([tok, cf_token], dim=0)
@@ -227,10 +227,7 @@ class Kandinsky2_1:
             cond_eps, uncond_eps = torch.split(eps, len(eps) // 2, dim=0)
             half_eps = uncond_eps + guidance_scale * (cond_eps - uncond_eps)
             eps = torch.cat([half_eps, half_eps], dim=0)
-            if sampler == "p_sampler":
-                return torch.cat([eps, rest], dim=1)
-            else:
-                return eps
+            return torch.cat([eps, rest], dim=1) if sampler == "p_sampler" else eps
 
         if noise is not None:
             noise = noise.float()
@@ -270,7 +267,7 @@ class Kandinsky2_1:
                 )
             else:
                 raise ValueError("Only ddim_sampler and plms_sampler is available")
-                
+
             self.model.del_cache()
             samples, _ = sampler.sample(
                 num_steps,
@@ -282,12 +279,12 @@ class Kandinsky2_1:
             )
             self.model.del_cache()
             samples = samples[:batch_size]
-            
+
         if self.use_image_enc:
             if self.use_fp16:
                 samples = samples.half()
             samples = self.image_encoder.decode(samples / self.scale)
-            
+
         samples = samples[:, :, :h, :w]
         return process_images(samples)
 
@@ -367,33 +364,35 @@ class Kandinsky2_1:
         negative_decoder_prompt="",
     ):
         assert len(images_texts) == len(weights) and len(images_texts) > 0
-        
+
         # generate clip embeddings
         image_emb = None
         for i in range(len(images_texts)):
             if image_emb is None:
-                if type(images_texts[i]) == str:
-                    image_emb = weights[i] * self.generate_clip_emb(
+                image_emb = (
+                    weights[i]
+                    * self.generate_clip_emb(
                         images_texts[i],
                         batch_size=1,
                         prior_cf_scale=prior_cf_scale,
                         prior_steps=prior_steps,
                         negative_prior_prompt=negative_prior_prompt,
                     )
-                else:
-                    image_emb = self.encode_images(images_texts[i], is_pil=True) * weights[i]
+                    if type(images_texts[i]) == str
+                    else self.encode_images(images_texts[i], is_pil=True)
+                    * weights[i]
+                )
+            elif type(images_texts[i]) == str:
+                image_emb = image_emb + weights[i] * self.generate_clip_emb(
+                    images_texts[i],
+                    batch_size=1,
+                    prior_cf_scale=prior_cf_scale,
+                    prior_steps=prior_steps,
+                    negative_prior_prompt=negative_prior_prompt,
+                )
             else:
-                if type(images_texts[i]) == str:
-                    image_emb = image_emb + weights[i] * self.generate_clip_emb(
-                        images_texts[i],
-                        batch_size=1,
-                        prior_cf_scale=prior_cf_scale,
-                        prior_steps=prior_steps,
-                        negative_prior_prompt=negative_prior_prompt,
-                    )
-                else:
-                    image_emb = image_emb + self.encode_images(images_texts[i], is_pil=True) * weights[i]
-                    
+                image_emb = image_emb + self.encode_images(images_texts[i], is_pil=True) * weights[i]
+
         image_emb = image_emb.repeat(batch_size, 1)
         if negative_decoder_prompt == "":
             zero_image_emb = self.create_zero_img_emb(batch_size=batch_size)
@@ -406,7 +405,7 @@ class Kandinsky2_1:
                 negative_prior_prompt=negative_prior_prompt,
             )
         image_emb = torch.cat([image_emb, zero_image_emb], dim=0).to(self.device)
-        
+
         # load diffusion
         config = deepcopy(self.config)
         if sampler == "p_sampler":

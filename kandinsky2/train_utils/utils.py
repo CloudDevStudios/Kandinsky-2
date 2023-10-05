@@ -203,10 +203,9 @@ def get_boxes(bs, target_size, min_scale=0.1, max_scale=0.62):
 
 def get_image_mask(bs, target_size):
     boxes = get_boxes(bs, target_size)
-    image_mask = torch.stack(
+    return torch.stack(
         [torch.tensor(generate_mask(target_size, box)) for box in boxes]
     )
-    return image_mask
 
 
 def freeze_decoder(

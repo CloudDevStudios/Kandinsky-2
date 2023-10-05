@@ -11,10 +11,7 @@ from functools import partial
 def apply_init_step(timesteps, init_step=None):
     if init_step is None:
         return timesteps
-    new_timesteps = []
-    for i in timesteps:
-        if i <= init_step:
-            new_timesteps.append(i)
+    new_timesteps = [i for i in timesteps if i <= init_step]
     return np.array(new_timesteps)
 
 
@@ -45,10 +42,7 @@ def make_ddim_timesteps(
             f'There is no ddim discretization method called "{ddim_discr_method}"'
         )
 
-    # assert ddim_timesteps.shape[0] == num_ddim_timesteps
-    # add one to get the final alpha values right (the ones from first scale to data during sampling)
-    steps_out = ddim_timesteps + 1
-    return steps_out
+    return ddim_timesteps + 1
 
 
 def noise_like(shape, device, repeat=False):
@@ -225,18 +219,14 @@ class DDIMSampler(object):
     ):
         device = "cuda"
         b = shape[0]
-        if x_T is None:
-            img = torch.randn(shape, device=device)
-        else:
-            img = x_T
-
+        img = torch.randn(shape, device=device) if x_T is None else x_T
         if timesteps is None:
             timesteps = (
                 self.ddpm_num_timesteps
                 if ddim_use_original_steps
                 else self.ddim_timesteps
             )
-        elif timesteps is not None and not ddim_use_original_steps:
+        elif not ddim_use_original_steps:
             subset_end = (
                 int(
                     min(timesteps / self.ddim_timesteps.shape[0], 1)
@@ -494,18 +484,14 @@ class PLMSSampler(object):
     ):
         device = "cuda"
         b = shape[0]
-        if x_T is None:
-            img = torch.randn(shape, device=device)
-        else:
-            img = x_T
-
+        img = torch.randn(shape, device=device) if x_T is None else x_T
         if timesteps is None:
             timesteps = (
                 self.ddpm_num_timesteps
                 if ddim_use_original_steps
                 else self.ddim_timesteps
             )
-        elif timesteps is not None and not ddim_use_original_steps:
+        elif not ddim_use_original_steps:
             subset_end = (
                 int(
                     min(timesteps / self.ddim_timesteps.shape[0], 1)

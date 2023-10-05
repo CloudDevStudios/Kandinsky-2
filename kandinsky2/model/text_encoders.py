@@ -17,8 +17,7 @@ import os
 def attention(q, k, v, d_k):
     scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
     scores = F.softmax(scores, dim=-1)
-    output = torch.matmul(scores, v)
-    return output
+    return torch.matmul(scores, v)
 
 
 class AttentionPooling(nn.Module):

@@ -19,29 +19,27 @@ class DiagonalGaussianDistribution(object):
             )
 
     def sample(self):
-        x = self.mean + self.std * torch.randn(self.mean.shape).to(
+        return self.mean + self.std * torch.randn(self.mean.shape).to(
             device=self.parameters.device
         )
-        return x
 
     def kl(self, other=None):
         if self.deterministic:
             return torch.Tensor([0.0])
+        if other is None:
+            return 0.5 * torch.sum(
+                torch.pow(self.mean, 2) + self.var - 1.0 - self.logvar,
+                dim=[1, 2, 3],
+            )
         else:
-            if other is None:
-                return 0.5 * torch.sum(
-                    torch.pow(self.mean, 2) + self.var - 1.0 - self.logvar,
-                    dim=[1, 2, 3],
-                )
-            else:
-                return 0.5 * torch.sum(
-                    torch.pow(self.mean - other.mean, 2) / other.var
-                    + self.var / other.var
-                    - 1.0
-                    - self.logvar
-                    + other.logvar,
-                    dim=[1, 2, 3],
-                )
+            return 0.5 * torch.sum(
+                torch.pow(self.mean - other.mean, 2) / other.var
+                + self.var / other.var
+                - 1.0
+                - self.logvar
+                + other.logvar,
+                dim=[1, 2, 3],
+            )
 
     def nll(self, sample, dims=[1, 2, 3]):
         if self.deterministic:
@@ -178,11 +176,7 @@ class ResnetBlock(nn.Module):
         h = self.conv2(h)
 
         if self.in_channels != self.out_channels:
-            if self.use_conv_shortcut:
-                x = self.conv_shortcut(x)
-            else:
-                x = self.nin_shortcut(x)
-
+            x = self.conv_shortcut(x) if self.use_conv_shortcut else self.nin_shortcut(x)
         return x + h
 
 
@@ -293,7 +287,7 @@ class Encoder(nn.Module):
             attn = nn.ModuleList()
             block_in = ch * in_ch_mult[i_level]
             block_out = ch * ch_mult[i_level]
-            for i_block in range(self.num_res_blocks):
+            for _ in range(self.num_res_blocks):
                 block.append(
                     ResnetBlock(
                         in_channels=block_in,
@@ -405,9 +399,7 @@ class Decoder(nn.Module):
         curr_res = resolution // 2 ** (self.num_resolutions - 1)
         self.z_shape = (1, z_channels, curr_res, curr_res)
         print(
-            "Working with z of shape {} = {} dimensions.".format(
-                self.z_shape, np.prod(self.z_shape)
-            )
+            f"Working with z of shape {self.z_shape} = {np.prod(self.z_shape)} dimensions."
         )
 
         # z to block_in
@@ -437,7 +429,7 @@ class Decoder(nn.Module):
             block = nn.ModuleList()
             attn = nn.ModuleList()
             block_out = ch * ch_mult[i_level]
-            for i_block in range(self.num_res_blocks + 1):
+            for _ in range(self.num_res_blocks + 1):
                 block.append(
                     ResnetBlock(
                         in_channels=block_in,

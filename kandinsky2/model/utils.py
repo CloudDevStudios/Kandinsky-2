@@ -60,10 +60,7 @@ def get_obj_from_str(string):
 
 
 def dict_keys(d, keys):
-    d2 = {}
-    for i in keys:
-        d2[i] = d[i]
-    return d2
+    return {i: d[i] for i in keys}
 
 
 def return_images(bath):

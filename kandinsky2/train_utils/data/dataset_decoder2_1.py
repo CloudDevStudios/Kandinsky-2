@@ -78,17 +78,10 @@ class TextImageDataset(Dataset):
         self.infinity = infinity
 
     def __len__(self):
-        if self.infinity:
-            return 99999999
-        else:
-            return len(self.df)
+        return 99999999 if self.infinity else len(self.df)
 
     def __getitem__(self, item):
-        if self.infinity:
-            ind = randint(0, len(self.df) - 1)
-        else:
-            ind = item
-        out_dict = {}
+        ind = randint(0, len(self.df) - 1) if self.infinity else item
         image = Image.open(self.df["image_name"].iloc[ind])
         clip_image = self.transform1(deepcopy(image))
         image = center_crop(image)
@@ -111,14 +104,15 @@ class TextImageDataset(Dataset):
             return_tensors="pt",
         )
 
-        out_dict["tokens"] = text_encoding["input_ids"][0]
-        out_dict["mask"] = text_encoding["attention_mask"][0]
-        if np.random.binomial(1, self.drop_image_prob):
-            out_dict["clip_image"] = torch.zeros(
+        out_dict = {
+            "tokens": text_encoding["input_ids"][0],
+            "mask": text_encoding["attention_mask"][0],
+            "clip_image": torch.zeros(
                 3, self.clip_image_size, self.clip_image_size
             )
-        else:
-            out_dict["clip_image"] = clip_image
+            if np.random.binomial(1, self.drop_image_prob)
+            else clip_image,
+        }
         return np.transpose(image, [2, 0, 1]), out_dict
 
 

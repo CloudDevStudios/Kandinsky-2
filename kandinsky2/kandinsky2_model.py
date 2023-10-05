@@ -27,7 +27,7 @@ class Kandinsky2:
         self.config = config
         self.device = device
         self.task_type = task_type
-        if task_type == "text2img" or task_type == "img2img":
+        if task_type in ["text2img", "img2img"]:
             self.config["model_config"]["up"] = False
             self.config["model_config"]["inpainting"] = False
         elif task_type == "inpainting":
@@ -35,7 +35,7 @@ class Kandinsky2:
             self.config["model_config"]["inpainting"] = True
         else:
             raise ValueError("Only text2img, img2img and inpainting is available")
-            
+
         self.tokenizer1 = AutoTokenizer.from_pretrained(self.config["tokenizer_name1"])
         self.tokenizer2 = AutoTokenizer.from_pretrained(self.config["tokenizer_name2"])
 
@@ -62,7 +62,7 @@ class Kandinsky2:
             self.image_encoder.eval()
         else:
             self.use_image_enc = False
-            
+
         self.config["model_config"]["cache_text_emb"] = True
         self.model = create_model(**self.config["model_config"])
         self.model.load_state_dict(torch.load(model_path), strict=False)
@@ -156,10 +156,7 @@ class Kandinsky2:
             cond_eps, uncond_eps = torch.split(eps, len(eps) // 2, dim=0)
             half_eps = uncond_eps + guidance_scale * (cond_eps - uncond_eps)
             eps = torch.cat([half_eps, half_eps], dim=0)
-            if sampler == "p_sampler":
-                return torch.cat([eps, rest], dim=1)
-            else:
-                return eps
+            return torch.cat([eps, rest], dim=1) if sampler == "p_sampler" else eps
 
         if self.task_type == "inpainting":
             def denoised_fn(x_start):
@@ -188,7 +185,7 @@ class Kandinsky2:
                 return x
 
             denoised_function = None
-            
+
         if sampler == "p_sampler":
             self.model.del_cache()
             samples = diffusion.p_sample_loop(

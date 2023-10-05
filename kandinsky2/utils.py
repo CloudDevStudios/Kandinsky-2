@@ -35,8 +35,7 @@ def prepare_image(pil_image, w=512, h=512):
     arr = np.array(pil_image.convert("RGB"))
     arr = arr.astype(np.float32) / 127.5 - 1
     arr = np.transpose(arr, [2, 0, 1])
-    image = torch.from_numpy(arr).unsqueeze(0)
-    return image
+    return torch.from_numpy(arr).unsqueeze(0)
 
 
 def q_sample(x_start, t, schedule_name="linear", num_steps=1000, noise=None):
@@ -64,7 +63,4 @@ def process_images(batch):
         .permute(0, 2, 3, 1)
         .numpy()
     )
-    images = []
-    for i in range(scaled.shape[0]):
-        images.append(Image.fromarray(scaled[i]))
-    return images
+    return [Image.fromarray(scaled[i]) for i in range(scaled.shape[0])]
